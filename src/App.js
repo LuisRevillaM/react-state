@@ -13,7 +13,7 @@ const ColorInfo = props => {
 
 class HexInput extends Component {
   state = {
-    color: ""
+    color: "000000"
   };
 
   componentDidUpdate(prevProps, prevState) {
@@ -38,106 +38,108 @@ class HexInput extends Component {
   }
 }
 
-class App extends Component {
-  state = {
-    status: "ready",
-    colorData: {},
-    validatedHex: ""
-  };
-
-  componentDidMount() {
-    this.fetchColor(this.state.color);
-  }
-  componentDidUpdate() {
-    if (
-      this.state.status === "ready" &&
-      this.state.colorData.hex &&
-      this.state.colorData.hex.clean !== this.state.validatedHex.toUpperCase()
-    ) {
-      this.fetchColor(this.state.validatedHex);
-    }
-  }
-  componentWillUnmount() {
-    this.controller.abort();
-  }
-
-  stateReducer = (state, action) => {
-    switch (action.type) {
-      case "ready":
-        return Object.assign(state, {
-          status: "ready",
-          validatedHex: action.payload
-        });
-      case "fetch":
-        return Object.assign(state, { status: "loading" });
-      case "success":
-        return Object.assign(state, {
-          status: "done",
-          colorData: action.payload
-        });
-      case "failure":
-        return Object.assign(state, { status: "error" });
-      default:
-        return state;
-    }
-  };
-
-  dispatch = action => {
-    console.log(action.type, action);
-    const newState = this.stateReducer(this.state, action);
-    this.setState(newState);
-  };
-
-  dispatchHex = () => {
-    let action = { type: "ready", payload: "" };
-    return color => {
-      action.payload = color;
-      this.dispatch(action);
+const App = Wrapped => {
+  return class extends Component {
+    state = {
+      status: "ready",
+      colorData: {},
+      validatedHex: "000000"
     };
-  };
+    componentDidMount() {
+      this.controller = this.fetchColor(this.state.validatedHex);
+    }
+    componentDidUpdate() {
+      if (
+        this.state.status === "ready" &&
+        this.state.colorData.hex &&
+        this.state.colorData.hex.clean !== this.state.validatedHex.toUpperCase()
+      ) {
+        this.fetchColor(this.state.validatedHex);
+      }
+    }
+    componentWillUnmount() {
+      this.controller.abort();
+    }
+    controller = {};
+    stateReducer = (state, action) => {
+      switch (action.type) {
+        case "ready":
+          return Object.assign(state, {
+            status: "ready",
+            validatedHex: action.payload
+          });
+        case "fetch":
+          return Object.assign(state, { status: "loading" });
+        case "success":
+          return Object.assign(state, {
+            status: "done",
+            colorData: action.payload
+          });
+        case "failure":
+          return Object.assign(state, { status: "error" });
+        default:
+          return state;
+      }
+    };
+    dispatch = action => {
+      console.log(action.type, action);
+      const newState = this.stateReducer(this.state, action);
+      this.setState(newState);
+    };
 
-  getAbortController = () => {
-    const controller = new AbortController();
-    return controller;
-  };
+    dispatchHex = (() => {
+      let action = { type: "ready", payload: "" };
+      return color => {
+        action.payload = color;
+        this.dispatch(action);
+      };
+    })();
 
-  fetchColor = async function fetchFlow(color) {
-    const controller = this.getAbortController();
-    const abortSignal = controller.signal;
+    getAbortController = () => {
+      const controller = new AbortController();
+      return controller;
+    };
 
-    this.dispatch({ type: "fetch" });
-    const data = await fetch(`http://www.thecolorapi.com/id?hex=${color}`, {
-      signal: abortSignal
-    });
+    fetchColor = async function fetchFlow(color) {
+      const controller = this.getAbortController();
+      const abortSignal = controller.signal;
 
-    const jsonData = await data.json();
+      this.dispatch({ type: "fetch" });
+      const data = await fetch(`http://www.thecolorapi.com/id?hex=${color}`, {
+        signal: abortSignal
+      });
 
-    console.log(jsonData);
-    this.dispatch({ type: "success", payload: jsonData });
-  };
+      const jsonData = await data.json();
 
-  renderContent = () => {
-    if (this.state.colorData.hsl !== undefined) {
+      console.log(jsonData);
+      this.dispatch({ type: "success", payload: jsonData });
+
+      return controller;
+    };
+
+    renderContent = () => {
+      if (this.state.colorData.hsl !== undefined) {
+        return (
+          <Wrapped
+            hsl={this.state.colorData.hsl.value}
+            hsv={this.state.colorData.hsv.value}
+            image={this.state.colorData.image.bare}
+          />
+        );
+      } else if (this.state.status === "loading") {
+        return <div>Loading...</div>;
+      }
+    };
+
+    render() {
       return (
-        <ColorInfo
-          hsl={this.state.colorData.hsl.value}
-          hsv={this.state.colorData.hsv.value}
-          image={this.state.colorData.image.bare}
-        />
+        <div className="App">
+          <HexInput dispatchHex={this.dispatchHex} />
+          {this.renderContent()}
+        </div>
       );
-    } else if (this.state.status === "loading") {
-      return <div>Loading...</div>;
     }
   };
+};
 
-  render() {
-    return (
-      <div className="App">
-        <HexInput dispatchHex={this.dispatchHex()} />
-        {this.renderContent()}
-      </div>
-    );
-  }
-}
-
-export default App;
+export default App(ColorInfo);
