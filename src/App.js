@@ -2,13 +2,9 @@ import React, { Component } from "react";
 import "./App.css";
 
 const ColorInfo = props => {
-  return (
-    <div>
-      <div>{props.hsl}</div>
-      <div>{props.hsv}</div>
-      <img alt="color" src={props.image} />
-    </div>
-  );
+  let data = JSON.stringify(props.colorData);
+  console.log(data);
+  return <div>{data}</div>;
 };
 
 class HexInput extends Component {
@@ -119,13 +115,7 @@ const App = Wrapped => {
 
     renderContent = () => {
       if (this.state.colorData.hsl !== undefined) {
-        return (
-          <Wrapped
-            hsl={this.state.colorData.hsl.value}
-            hsv={this.state.colorData.hsv.value}
-            image={this.state.colorData.image.bare}
-          />
-        );
+        return <Wrapped colorData={this.state.colorData} />;
       } else if (this.state.status === "loading") {
         return <div>Loading...</div>;
       }
