@@ -99,25 +99,33 @@ const App = Wrapped => {
     fetchColor = async function fetchFlow(color) {
       const controller = this.getAbortController();
       const abortSignal = controller.signal;
-
       this.dispatch({ type: "fetch" });
-      const data = await fetch(`http://www.thecolorapi.com/id?hex=${color}`, {
-        signal: abortSignal
-      });
 
-      const jsonData = await data.json();
+      try {
+        const data = await fetch(`http://www.thecolorapi.com/id?hex=${color}`, {
+          signal: abortSignal
+        });
 
-      console.log(jsonData);
-      this.dispatch({ type: "success", payload: jsonData });
+        const jsonData = await data.json();
+
+        this.dispatch({ type: "success", payload: jsonData });
+      } catch (e) {
+        this.dispatch({ type: "failure" });
+      }
 
       return controller;
     };
 
     renderContent = () => {
-      if (this.state.colorData.hsl !== undefined) {
+      if (
+        this.state.colorData.hsl !== undefined &&
+        this.state.status !== "error"
+      ) {
         return <Wrapped colorData={this.state.colorData} />;
       } else if (this.state.status === "loading") {
         return <div>Loading...</div>;
+      } else if (this.state.status === "error") {
+        return <div>Error en la conexión</div>;
       }
     };
 
