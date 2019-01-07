@@ -22,9 +22,21 @@ export default class WithLocalColors extends Component {
       return;
     }
 
-    this.setState(prevState => {
-      return { colors: [...prevState.colors, colorData] };
-    });
+    this.setState(
+      prevState => {
+        return { colors: [...prevState.colors, colorData] };
+      },
+      () => {
+        this.saveToLocalStorage(colorData);
+      }
+    );
+  };
+
+  saveToLocalStorage = colorData => {
+    window.localStorage.setItem(
+      `"${colorData.hex.clean}"`,
+      JSON.stringify(colorData)
+    );
   };
 
   getColors = function() {

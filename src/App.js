@@ -1,13 +1,10 @@
 import React, { Component } from "react";
 import "./App.css";
 import WithLocalColors from "./WithLocalColors";
+
 const ColorInfo = props => {
   let saveToLocalStorage = () => {
     props.saveColor(props.colorData);
-    window.localStorage.setItem(
-      `"${props.colorData.hex.clean}"`,
-      JSON.stringify(props.colorData)
-    );
   };
 
   return (
@@ -162,7 +159,12 @@ class App extends Component {
           <div>
             <div>
               {localColors.map(c => {
-                return <img src={c.image.bare} alt="color" />;
+                return (
+                  <div style={{ display: "inline-block", textAlign: "center" }}>
+                    <img src={c.image.bare} alt="color" />
+                    <div>{c.hex.value}</div>
+                  </div>
+                );
               })}
             </div>
           </div>
