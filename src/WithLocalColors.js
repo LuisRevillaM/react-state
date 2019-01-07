@@ -50,7 +50,6 @@ export default class WithLocalColors extends Component {
   };
 
   render() {
-    console.log("state now", this.state.colors);
     return <div>{this.props.render(this.state.colors, this.saveColor)}</div>;
   }
 }

@@ -160,7 +160,13 @@ class App extends Component {
             <div>
               {localColors.map(c => {
                 return (
-                  <div style={{ display: "inline-block", textAlign: "center" }}>
+                  <div
+                    style={{
+                      display: "inline-block",
+                      textAlign: "center",
+                      marginRight: 2
+                    }}
+                  >
                     <img src={c.image.bare} alt="color" />
                     <div>{c.hex.value}</div>
                   </div>
