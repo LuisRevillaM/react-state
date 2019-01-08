@@ -1,20 +1,30 @@
 import React, { Component } from "react";
 import "./App.css";
-import WithLocalColors from "./WithLocalColors";
+import { addColor, hydrateColors } from "./actions";
+import ColorStore from "./colorStore";
+
+//ColorInfo is a stateless component that nonetheless has in scope the method
+//addColor: an action creator that dispatches actions with data to modify the
+//global state of our app, adding a color to our collection
 
 const ColorInfo = props => {
-  let saveToLocalStorage = () => {
-    props.saveColor(props.colorData);
+  let saveColor = () => {
+    addColor(props.colorData);
   };
 
   return (
     <div>
       <img src={props.colorData.image.named} alt="color" />
-      <button onClick={saveToLocalStorage}>Save color</button>
+      <button onClick={saveColor}>Save color</button>
     </div>
   );
 };
 
+//HexInput is a text input component that executes a handler (passed as props)
+//every time the input represents a 6 digit, hexadecimal code representing a color
+//HexInput is a stateful component, only to hold the value of the text input.
+//This component does not interact with our global Flux store. It however receives
+//a method that changes the state of its parent
 class HexInput extends Component {
   state = {
     color: "000000"
@@ -42,7 +52,13 @@ class HexInput extends Component {
   }
 }
 
-class WithSearchData extends Component {
+//SearchColor is a Component that shares remote data about a given color through
+//the render-props pattern.The component holds an text input and functionality
+//to fetch data from The Color API and update its state. This component does not
+//consume or modifie our global Flux store. It's render prop could however
+//output a tree that includes a component that does affect/reads the flux store.
+
+class SearchColor extends Component {
   state = {
     status: "ready",
     colorData: {},
@@ -146,45 +162,67 @@ class WithSearchData extends Component {
   }
 }
 
+//Our main component subscribes to the flux store to have an updated list of colors.
+//It's also in charge of "hydrating" our store initially, dispatching the HYDRATE_COLORS
+//action after reading the LocalStore on componentDidMount
+//It's only the ColorInfo component the one with access to addColor action creator.
+//Amazing.
+
 class App extends Component {
-  renderApp = () => {
-    let withLocalData = (localColors, addColor) => {
-      return (
-        <div>
-          <WithSearchData
-            render={data => {
-              return <ColorInfo colorData={data} saveColor={addColor} />;
-            }}
-          />
-          <div>
-            <div>
-              {localColors.map(c => {
-                return (
-                  <div
-                    style={{
-                      display: "inline-block",
-                      textAlign: "center",
-                      marginRight: 2
-                    }}
-                  >
-                    <img src={c.image.bare} alt="color" />
-                    <div>{c.hex.value}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      );
-    };
+  state = {
+    colors: ColorStore.getColors()
+  };
+  componentDidMount() {
+    ColorStore.on("change", this.updateColorsInState);
+
+    const colors = this.getColorsFromLocalStorage();
+
+    if (colors && colors.length > 0) {
+      hydrateColors(colors);
+    }
+  }
+  updateColorsInState = () => {
+    this.setState({ colors: ColorStore.getColors() });
+  };
+
+  getColorsFromLocalStorage = function() {
+    const localStorage = window.localStorage.getItem("colors");
+
+    if (localStorage) {
+      const arr = JSON.parse(localStorage);
+      return arr;
+    }
+  };
+
+  render() {
     return (
       <div>
-        <WithLocalColors render={withLocalData} />
+        <SearchColor
+          render={data => {
+            return <ColorInfo colorData={data} />;
+          }}
+        />
+        <div>
+          <div>
+            {this.state.colors.map(c => {
+              return (
+                <div
+                  key={c._id}
+                  style={{
+                    display: "inline-block",
+                    textAlign: "center",
+                    marginRight: 2
+                  }}
+                >
+                  <img src={c.image.bare} alt="color" />
+                  <div>{c.hex.value}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     );
-  };
-  render() {
-    return this.renderApp();
   }
 }
 
