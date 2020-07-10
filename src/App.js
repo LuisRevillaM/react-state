@@ -1,143 +1,47 @@
-import React, { Component } from "react";
+import React from "react";
 import "./App.css";
+import ColorInfo from "./ColorInfo";
+import HexInput from './HexInput';
 
-const ColorInfo = props => {
-  return (
-    <div>
-      <div>{props.hsl}</div>
-      <div>{props.hsv}</div>
-      <img alt="color" src={props.image} />
-    </div>
-  );
-};
+const App = ({ fetchColor, stateReducer, initialState }) => {
+  const [state, dispatch] = React.useReducer(stateReducer, initialState);
+  const controller = new AbortController;
+console.log(state.status);
+  const fetch = fetchColor({hex: state.validatedHex, dispatch:dispatch, abortController: controller.signal });
+  React.useEffect(()=>{
+    console.log('running effect')
+    if (state.status === "ready") fetch();
 
-class HexInput extends Component {
-  state = {
-    color: ""
-  };
-
-  componentDidUpdate(prevProps, prevState) {
-    if (
-      /^[a-fA-F\d]{6}$/.test(this.state.color) &&
-      this.state.color.toUpperCase() !== prevState.color.toUpperCase()
-    ) {
-      this.props.dispatchHex(this.state.color);
+    return () => {
+      controller.abort();
     }
-  }
+  });
 
-  handleChange = e => {
-    this.setState({ color: e.target.value });
+  const dispatchHex = (color) => {
+    dispatch({ type: "ready", payload: color });
   };
 
-  render() {
-    return (
-      <div>
-        <input value={this.state.color} onChange={this.handleChange} />
-      </div>
-    );
-  }
-}
-
-class App extends Component {
-  state = {
-    status: "ready",
-    colorData: {},
-    validatedHex: ""
-  };
-
-  componentDidMount() {
-    this.fetchColor(this.state.color);
-  }
-  componentDidUpdate() {
-    if (
-      this.state.status === "ready" &&
-      this.state.colorData.hex &&
-      this.state.colorData.hex.clean !== this.state.validatedHex.toUpperCase()
-    ) {
-      this.fetchColor(this.state.validatedHex);
-    }
-  }
-  componentWillUnmount() {
-    this.controller.abort();
-  }
-
-  stateReducer = (state, action) => {
-    switch (action.type) {
-      case "ready":
-        return Object.assign(state, {
-          status: "ready",
-          validatedHex: action.payload
-        });
-      case "fetch":
-        return Object.assign(state, { status: "loading" });
-      case "success":
-        return Object.assign(state, {
-          status: "done",
-          colorData: action.payload
-        });
-      case "failure":
-        return Object.assign(state, { status: "error" });
-      default:
-        return state;
-    }
-  };
-
-  dispatch = action => {
-    console.log(action.type, action);
-    const newState = this.stateReducer(this.state, action);
-    this.setState(newState);
-  };
-
-  dispatchHex = () => {
-    let action = { type: "ready", payload: "" };
-    return color => {
-      action.payload = color;
-      this.dispatch(action);
-    };
-  };
-
-  getAbortController = () => {
-    const controller = new AbortController();
-    return controller;
-  };
-
-  fetchColor = async function fetchFlow(color) {
-    const controller = this.getAbortController();
-    const abortSignal = controller.signal;
-
-    this.dispatch({ type: "fetch" });
-    const data = await fetch(`http://www.thecolorapi.com/id?hex=${color}`, {
-      signal: abortSignal
-    });
-
-    const jsonData = await data.json();
-
-    console.log(jsonData);
-    this.dispatch({ type: "success", payload: jsonData });
-  };
-
-  renderContent = () => {
-    if (this.state.colorData.hsl !== undefined) {
+  const renderContent = () => {
+    if (state.status === 'done') {
       return (
         <ColorInfo
-          hsl={this.state.colorData.hsl.value}
-          hsv={this.state.colorData.hsv.value}
-          image={this.state.colorData.image.bare}
+          hsl={state.colorData.hsl.value}
+          hsv={state.colorData.hsv.value}
+          image={state.colorData.image.bare}
         />
       );
-    } else if (this.state.status === "loading") {
+    } else if (state.status === "loading") {
       return <div>Loading...</div>;
     }
   };
 
-  render() {
-    return (
-      <div className="App">
-        <HexInput dispatchHex={this.dispatchHex()} />
-        {this.renderContent()}
-      </div>
-    );
-  }
+  return (
+    <div className="App">
+      <HexInput dispatchHex={dispatchHex} />
+      {renderContent()}
+    </div>
+  );
 }
+
 
 export default App;
