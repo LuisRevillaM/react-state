@@ -3,10 +3,39 @@ import "./App.css";
 import ColorInfo from "./ColorInfo";
 import HexInput from './HexInput';
 
-const App = ({ fetchColor, stateReducer, initialState }) => {
+const App = ({ fetchColor }) => {
+  const initialState = {
+    status: "ready",
+    colorData: {},
+    validatedHex: "000000",
+  };
+  
+  const stateReducer = (state, action) => {
+    switch (action.type) {
+      case "ready":
+        return {
+          ...state,
+          status: "ready",
+          validatedHex: action.payload,
+        };
+      case "fetch":
+        return { ...state, status: "loading" };
+      case "success":
+        return {
+          ...state,
+          status: "done",
+          colorData: action.payload,
+        };
+      case "failure":
+        return { ...state, status: "error" };
+      default:
+        throw new Error("wrong action");
+    }
+  };
+
   const [state, dispatch] = React.useReducer(stateReducer, initialState);
   const controller = new AbortController;
-console.log(state.status);
+
   const fetch = fetchColor({hex: state.validatedHex, dispatch:dispatch, abortController: controller.signal });
   React.useEffect(()=>{
     console.log('running effect')
@@ -15,7 +44,7 @@ console.log(state.status);
     return () => {
       controller.abort();
     }
-  });
+  }, [state.validatedHex]);
 
   const dispatchHex = (color) => {
     dispatch({ type: "ready", payload: color });
